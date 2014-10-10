@@ -1,0 +1,5 @@
+*.log
+*.txt
+reports/
+symbols/
+symsrv.yes

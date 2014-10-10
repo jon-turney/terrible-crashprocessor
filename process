@@ -1,0 +1,36 @@
+#!/bin/sh
+CRASHPROCESSOR=/crashprocessor
+
+echo "Fetching crash reports"
+
+rsync -a --itemize-changes --ignore-existing $CRASHREPORTS reports
+## XXX: and remove files from using --remove-source-files
+## XXX: then ssh $CRASHREPORTS find ~/uploads -depth -type -d -empty -delete
+
+echo "Identifying needed symbols"
+
+# get a list of needed symbols
+cd reports
+for i in *; do
+    minidump_stackwalk $i/$i.dmp ${CRASHPROCESSOR}/symbols 2>&1 | grep "Couldn't load symbols for: " | cut -c74- | sed 's/|/,/' >>fetchlist.txt
+done
+
+# uniquify list of needed symbols
+sort -u fetchlist.txt >../fetchlist.txt
+rm fetchlist.txt
+cd ..
+
+cat fetchlist.txt
+
+# hit symsrv_convert.exe for missing .pdbs, convert and install
+python symsrv-fetch.py -v
+
+# XXX: hit cygwin debuginfo packages for missing .dbgs
+
+echo "Generating stackwalks"
+
+# generate stackwalks
+cd reports
+for i in *; do
+    minidump_stackwalk $i/$i.dmp ${CRASHPROCESSOR}/symbols >$i/$i.txt 2>/dev/null
+done
