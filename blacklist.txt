@@ -1,0 +1,15 @@
+XWin.exe
+aticfx32.pdb
+aticfx64.pdb
+atio6axx.pdb
+atioglxx.pdb
+atiu9pag.pdb
+atiumd64.pdb
+atiumdag.pdb
+atiumdva.pdb
+ig75icd32.pdb
+ig75icd64.pdb
+ig7icd64.pdb
+nView.pdb
+nvoglv32.pdb
+nvoglv64.pdb
