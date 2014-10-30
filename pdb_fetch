@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import httplib, os.path, argparse, sys, shutil
+
+"""pdb_fetch
+
+Loosely based on https://gist.github.com/steeve85/2665503 by Steeve Barbeau
+wrapped with some "Don't be a menace to the server" from symsrc-fetch.py
+
+If successful, this outputs the pathname of the PDB file requested
+
+If the PDB file is not found in the local PDB cache, try to retrieve it from
+the symbol server
+
+A skiplist of PDB filename/UUID combinations which could not be fetched is also
+maintained.
+
+Because it seems that sometimes that a particular PDB filename/UUID combination
+can show up in the wild before the symbols are available, we only place a PDB
+filename/UUID combination into that skiplist if we have no PDB files with that
+filename.
+
+(This still behaves badly in the edge case that the first time we see a PDB
+filename is in combination with a UUID that can't be fetched, but...)
+
+"""
+
+server = "msdl.microsoft.com"
+agent = "Microsoft-Symbol-Server/6.12.0002.633 (pdb_fetch:0.0)"
+url = "/download/symbols/%s.pdb/%s/%s.pd_"
+
+pdbcache = "/tmp/pdb/"
+skiplist_file_name = "skiplist.txt"
+
+skiplist = {}
+
+def cache_filename(file_name, uuid):
+  return os.path.join(pdbcache, file_name, uuid, file_name)
+
+def is_in_cache(file_name, uuid):
+  return os.path.exists(cache_filename(file_name, uuid))
+
+def download_pdb(file_name, uuid):
+  basename = os.path.splitext(file_name)[0]
+
+  conn = httplib.HTTPConnection(server)
+  headers = {"User-Agent": agent}
+  conn.request("GET", url % (basename, uuid, basename), "", headers)
+
+  response = conn.getresponse()
+
+  if response.status != 200:
+    print("Fetching from symbol server failed %d" % (response.status), file=sys.stderr)
+    return False
+
+  print("Downloading file ...", file=sys.stderr)
+  pdb_buffer = response.read()
+
+  pdb_filename = os.path.basename(url % (file_name, uuid, file_name))
+  pdb_file = open(pdb_filename, 'w')
+  pdb_file.write(pdb_buffer)
+  pdb_file.close()
+
+  print("Downloaded", file=sys.stderr)
+
+  # Run cabextract to extract PDB file from the CAB file
+  status = os.system("cabextract -q %s" % (pdb_filename))
+  if status != 0:
+    print("Decompressing cabinet file failed", file=sys.stderr)
+    return False
+
+  print("Extracted", file=sys.stderr)
+  os.remove(pdb_filename)
+
+  # Move extracted pdb file into cache location
+  if not os.path.exists(os.path.join(pdbcache, file_name, uuid)):
+    os.makedirs(os.path.join(pdbcache, file_name, uuid))
+  shutil.move(file_name, cache_filename(file_name, uuid))
+
+  return True
+
+def write_skiplist():
+  try:
+    with open(os.path.join(pdbcache, skiplist_file_name), 'w') as sf:
+      for (debug_id,debug_file) in skiplist.iteritems():
+          sf.write("%s %s\n" % (debug_id, debug_file))
+  except IOError:
+    print("Error writing %s" % (skiplist), file=sys.stderr)
+
+def read_skiplist():
+  skipcount = 0
+  try:
+    sf = file(os.path.join(pdbcache, skiplist_file_name), 'r')
+    for line in sf:
+      line = line.strip()
+      if line == '':
+        continue
+      s = line.split(None, 1)
+      if len(s) != 2:
+        continue
+      (debug_id, debug_file) = s
+      skiplist[debug_id] = debug_file.lower()
+      skipcount += 1
+    sf.close()
+  except IOError:
+    pass
+  print("Skiplist contains %d items" % skipcount, file=sys.stderr)
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--file', dest='file', help='PDB filename')
+  parser.add_argument('--uuid', dest='uuid', help='UUID')
+  parser.add_argument('--cache', dest='pdbcache', help='PDB cache')
+  args = parser.parse_args()
+
+  if args.pdbcache:
+    global pdbcache
+    pdbcache = args.pdbcache
+
+  if args.file and args.uuid:
+    args.file = os.path.basename(args.file)
+
+    if not args.file.endswith('.pdb'):
+      print("PDB filename doesn't have .pdb extension, ignoring", file=sys.stderr)
+      return 1
+
+    if len(args.uuid) != 33 or args.uuid == "000000000000000000000000000000000":
+      print("UUID is invalid, ignoring", file=sys.stderr)
+      return 1
+
+    read_skiplist()
+
+    if args.uuid in skiplist and skiplist[args.uuid] == args.file.lower():
+      # We've asked the symbol server previously about this, so skip it.
+      return 1
+
+    if not is_in_cache(args.file, args.uuid):
+      if not download_pdb(args.file, args.uuid):
+        # If we've never seen this PDB filename before with any UUID, add it to skiplist
+        if not os.path.exists(os.path.join(pdbcache, args.file)):
+          print("Adding to skiplist %s %s" % (args.file, args.uuid), file=sys.stderr)
+          skiplist[aggs.uuid] = args.file
+          write_skiplist()
+        return 1
+    else:
+      print("Found in cache", file=sys.stderr)
+
+    print(cache_filename(args.file, args.uuid))
+  else:
+    parser.print_help()
+  return 0
+
+if __name__ == "__main__":
+  sys.exit(main())
