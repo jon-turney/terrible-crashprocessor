@@ -1,5 +1,5 @@
 #!/bin/sh
-CRASHPROCESSOR=/crashprocessor
+SYMBOLS=/crashprocessor/symbols
 
 echo "Fetching crash reports"
 
@@ -12,7 +12,7 @@ echo "Identifying needed symbols"
 # get a list of needed symbols
 cd reports
 for i in *; do
-    minidump_stackwalk $i/$i.dmp ${CRASHPROCESSOR}/symbols 2>&1 | grep "Couldn't load symbols for: " | cut -c74- | sed 's/|/,/' >>fetchlist.txt
+    minidump_stackwalk $i/$i.dmp ${SYMBOLS} 2>&1 | grep "Couldn't load symbols for: " | cut -c74- | sed 's/|/,/' >>fetchlist.txt
 done
 
 # uniquify list of needed symbols
@@ -20,9 +20,9 @@ sort -u fetchlist.txt >../fetchlist.txt
 rm fetchlist.txt
 cd ..
 
-cat fetchlist.txt
+#cat fetchlist.txt
 
-# hit symsrv_convert.exe for missing .pdbs, convert and install
+# hit symsrv_convert.exe for missing .pdbs, convert and install into ${SYMBOLS}
 python symsrv-fetch.py -v
 
 # XXX: hit cygwin debuginfo packages for missing .dbgs
@@ -32,5 +32,5 @@ echo "Generating stackwalks"
 # generate stackwalks
 cd reports
 for i in *; do
-    minidump_stackwalk $i/$i.dmp ${CRASHPROCESSOR}/symbols >$i/$i.txt 2>/dev/null
+    minidump_stackwalk $i/$i.dmp ${SYMBOLS} >$i/$i.txt 2>/dev/null
 done
