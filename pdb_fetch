@@ -32,8 +32,6 @@ url = "/download/symbols/%s.pdb/%s/%s.pd_"
 pdbcache = "/tmp/pdb/"
 skiplist_file_name = "skiplist.txt"
 
-skiplist = {}
-
 def cache_filename(file_name, uuid):
   return os.path.join(pdbcache, file_name, uuid, file_name)
 
@@ -79,15 +77,16 @@ def download_pdb(file_name, uuid):
 
   return True
 
-def write_skiplist():
+def write_skiplist(skiplist):
   try:
     with open(os.path.join(pdbcache, skiplist_file_name), 'w') as sf:
       for (debug_id,debug_file) in skiplist.iteritems():
           sf.write("%s %s\n" % (debug_id, debug_file))
   except IOError:
-    print("Error writing %s" % (skiplist), file=sys.stderr)
+    print("Error writing %s" % (skiplist_file_name), file=sys.stderr)
 
 def read_skiplist():
+  skiplist = {}
   skipcount = 0
   try:
     sf = file(os.path.join(pdbcache, skiplist_file_name), 'r')
@@ -104,7 +103,8 @@ def read_skiplist():
     sf.close()
   except IOError:
     pass
-  print("Skiplist contains %d items" % skipcount, file=sys.stderr)
+#  print("Skiplist contains %d items" % skipcount, file=sys.stderr)
+  return skiplist
 
 def main():
   parser = argparse.ArgumentParser()
@@ -128,10 +128,11 @@ def main():
       print("UUID is invalid, ignoring", file=sys.stderr)
       return 1
 
-    read_skiplist()
+    skiplist = read_skiplist()
 
     if args.uuid in skiplist and skiplist[args.uuid] == args.file.lower():
       # We've asked the symbol server previously about this, so skip it.
+      print("%s/%s is on skiplist, ignoring" % (args.file, args.uuid), file=sys.stderr)
       return 1
 
     if not is_in_cache(args.file, args.uuid):
@@ -139,8 +140,8 @@ def main():
         # If we've never seen this PDB filename before with any UUID, add it to skiplist
         if not os.path.exists(os.path.join(pdbcache, args.file)):
           print("Adding to skiplist %s %s" % (args.file, args.uuid), file=sys.stderr)
-          skiplist[aggs.uuid] = args.file
-          write_skiplist()
+          skiplist[args.uuid] = args.file
+          write_skiplist(skiplist)
         return 1
     else:
       print("Found in cache", file=sys.stderr)
