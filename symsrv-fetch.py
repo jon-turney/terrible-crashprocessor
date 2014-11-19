@@ -133,16 +133,21 @@ for filename, ids in modules.iteritems():
                              "--uuid", id,
                              "--cache", pdb_path],
                             stdout = subprocess.PIPE,
-                            stderr = subprocess.STDOUT)
+                            stderr = subprocess.PIPE)
+
+    (stdoutdata, stderrdata) = proc.communicate()
+
+    convert_output = stderrdata.strip()
+    log.debug("pdb_fetch output: '%s'", convert_output)
 
     if proc.returncode != 0:
       not_found_count += 1
-      log.debug("pdb_fetch failed for %s/%s", filename, id)
+      log.debug("pdb_fetch failed for %s/%s %d", filename, id, proc.returncode)
       continue
 
     log.debug("Successfully fetched %s/%s", filename, id)
 
-    pdb_file = proc.stdout.read().strip()
+    pdb_file = stdoutdata.strip()
     log.debug("pdb_fetch output: '%s'", pdb_file)
 
     if not os.path.exists(os.path.join(symbol_path, filename, id)):
