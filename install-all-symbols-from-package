@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ $# -ne 1 ] ; then
+  echo "usage: $0 <package.tar.xz>"
+  exit 1
+fi
+
+T=`mktemp -d`
+tar -C $T -Jxf $1
+find $T -type f -name *.dbg -exec install-symbols {} \;
+rm -r $T

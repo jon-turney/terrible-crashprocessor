@@ -152,10 +152,10 @@ for filename, ids in modules.iteritems():
 
     if not os.path.exists(os.path.join(symbol_path, filename, id)):
       os.makedirs(os.path.join(symbol_path, filename, id))
-    if os.system("/wip/dump_syms/dump_syms %s >%s" % (pdb_file, sym_file)) != 0:
+    if os.system("./dump_syms_dia %s >%s" % (pdb_file, sym_file)) != 0:
       os.remove(sym_file)
       log.debug("Failed to convert %s/%s", filename, id)
-      conversion_failed = +1
+      conversion_failed += 1
 
     if os.path.exists(sym_file):
       log.debug("Successfully converted %s/%s", filename, id)

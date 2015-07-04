@@ -1,0 +1,11 @@
+#!/bin/sh
+for i in `find symbols.old -type f` ; do
+  j=${i/symbols.old/symbols}
+  if [ -f $j ] ; then
+      if diff -q $i $j >/dev/null ; then
+          echo "$i and $j are the same"
+      else
+          echo "$i and $j are different"
+      fi
+  fi
+done;

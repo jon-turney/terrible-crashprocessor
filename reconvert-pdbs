@@ -1,0 +1,8 @@
+#!/bin/sh
+
+for i in `find pdb -name *.pdb -type f` ; do
+  o=${i%.pdb}.sym
+  o=${o/#pdb/symbols}
+  ./dump_syms_dia $i >$o
+  d2u $o
+done

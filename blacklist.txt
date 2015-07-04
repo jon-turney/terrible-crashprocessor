@@ -1,6 +1,12 @@
+VBoxOGL.pdb
 XWin.exe
+atiadlxx.pdb
 aticfx32.pdb
 aticfx64.pdb
+atig6pxx.pdb
+atig6txx.pdb
+atigktxx.pdb
+atigktxx.pdb
 atio6axx.pdb
 atioglxx.pdb
 atiu9pag.pdb
@@ -10,6 +16,9 @@ atiumdva.pdb
 ig75icd32.pdb
 ig75icd64.pdb
 ig7icd64.pdb
+igdumdim32.pdb
+igdusc32.pdb
 nView.pdb
+nView64.pdb
 nvoglv32.pdb
 nvoglv64.pdb
