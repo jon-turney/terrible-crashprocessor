@@ -1,5 +1,6 @@
 <?php
 
+// $uploads_dir = "/tmp";
 $uploads_dir = "/home/dronecode/uploads";
 
 // Check for no files, multiple files, upload errors
@@ -18,8 +19,19 @@ if (!array_key_exists('upload_file_minidump', $_FILES)) {
     return;
 }
 
+// Check uploader version isn't too old to be useful
+$vers = 0;
+if (array_key_exists('Uploader', $_POST)) {
+  preg_match("#/(\d+)#", $_POST["Uploader"], $matches);
+  $vers = $matches[1];
+}
+if ($vers <= 20141015) {
+  // too old, discard the crash report
+  echo "crash reporter " . $vers . " is too old, please update.";
+  exit(0);
+}
+
 // Generate an id for this upload
-// $id = sha1_file($_FILES['upload_file_minidump']['tmp_name']);
 // XXX: terrible, use something which is properly serialized
 $id = 1 + intval(file_get_contents("$uploads_dir/id"));
 file_put_contents("$uploads_dir/id", $id);
@@ -47,6 +59,7 @@ foreach($_FILES as $key => $value) {
   // XXX: and compress?
 }
 
+// sleep(1);
 echo "ccr-" . $id;
 
 ?>
