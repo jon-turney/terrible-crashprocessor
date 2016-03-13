@@ -1,0 +1,9 @@
+#!/bin/sh
+SYMBOLS=/crashprocessor/symbols
+
+# generate stackwalks
+cd reports
+for i in *; do
+    minidump_stackwalk $i/$i.dmp ${SYMBOLS} >$i/$i.txt 2>/dev/null
+done
+

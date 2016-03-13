@@ -1,15 +1,6 @@
 #!/bin/sh
 SYMBOLS=/crashprocessor/symbols
 
-echo "Fetching crash reports"
-
-# Note that it's important that files can't be in the middle of being written to
-# if we use --remove source-files
-rsync -a --itemize-changes --ignore-existing --remove-source-files --inplace --exclude id ${CRASHREPORTHOST}:~/uploads/ reports
-ssh $CRASHREPORTHOST 'find ~/uploads -depth -mindepth 1 -type d -empty -delete'
-
-tar -Jcf reports.tar.xz reports
-
 echo "Identifying needed symbols"
 
 # get a list of needed symbols
