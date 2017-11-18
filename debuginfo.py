@@ -53,6 +53,7 @@ def process(args, f):
 
 def install_symbols(args, f):
     # print(f)
+    convert_ok = False
 
     with tempfile.NamedTemporaryFile(delete=False) as t:
         # print(t.name)
@@ -61,20 +62,22 @@ def install_symbols(args, f):
             # A .dbg file, detached debug information PECOFF file
             # use dump_syms to create .sym file
 
-            os.system('breakpad_dump_syms ' + f + ' >' + t.name)
-            (buildid, fileid) = extract_sym_ids(t.name)
-            # print("buildid %s fileid %s" % (buildid, fileid))
+            if (os.system('breakpad_dump_syms ' + f + ' >' + t.name) == 0):
+                (buildid, fileid) = extract_sym_ids(t.name)
+                # print("buildid %s fileid %s" % (buildid, fileid))
 
-            # cygwin1.dbg is irregularly named
-            # as a special case, treat it as if it was named cygwin1.dll.dbg
-            if fileid == 'cygwin1.dbg':
-                fileid = 'cygwin1.dll.dbg'
+                # cygwin1.dbg is irregularly named
+                # as a special case, treat it as if it was named cygwin1.dll.dbg
+                if fileid == 'cygwin1.dbg':
+                    fileid = 'cygwin1.dll.dbg'
 
-            # remove .dbg extension
-            fileid = os.path.splitext(fileid)[0]
+                # remove .dbg extension
+                fileid = os.path.splitext(fileid)[0]
 
-            # replace .dbg extension with .sym
-            symfile = fileid + '.sym'
+                # replace .dbg extension with .sym
+                symfile = fileid + '.sym'
+
+                convert_ok = True
 
         elif f.endswith('.sym'):
             # Already a breakpad .sym file
@@ -86,16 +89,19 @@ def install_symbols(args, f):
             # replace .pdb extension with .sym
             symfile = os.path.splitext(fileid)[0] + '.sym'
 
+            convert_ok = True
+
         else:
             print('Unknown file type %s' % (f))
 
-        # ensure the needed directory exists
-        symbolpath = os.path.join(args.symbol_root, fileid, buildid)
-        os.makedirs(symbolpath, exist_ok=True)
+        if convert_ok:
+            # ensure the needed directory exists
+            symbolpath = os.path.join(args.symbol_root, fileid, buildid)
+            os.makedirs(symbolpath, exist_ok=True)
 
-        # install the .sym file
-        os.rename(t.name, os.path.join(symbolpath, symfile))
-        print('%s installed to %s' % (symfile, symbolpath))
+            # install the .sym file
+            os.rename(t.name, os.path.join(symbolpath, symfile))
+            print('%s installed to %s' % (symfile, symbolpath))
 
 
 # extract the 'id' and 'name' fields from the MODULE record at the start of a
@@ -103,6 +109,7 @@ def install_symbols(args, f):
 def extract_sym_ids(fn):
     with open(fn) as f:
         return tuple(f.readline().split()[3:5])
+
 
 
 if __name__ == "__main__":
