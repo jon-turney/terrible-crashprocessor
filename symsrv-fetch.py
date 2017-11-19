@@ -72,7 +72,7 @@ log.debug("Loading fetchlist...")
 try:
   mf = file(os.path.join(thisdir, 'fetchlist.txt'), 'r')
   for line in mf:
-    line = line.rstrip()
+    line = line.strip()
     bits = line.split(',')
     if len(bits) < 2:
       continue

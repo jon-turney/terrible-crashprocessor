@@ -5,7 +5,7 @@ import httplib, os.path, argparse, sys, shutil
 """pdb_fetch
 
 Loosely based on https://gist.github.com/steeve85/2665503 by Steeve Barbeau
-wrapped with some "Don't be a menace to the server" from symsrc-fetch.py
+wrapped with some "Don't be a menace to the server" from symsrv-fetch.py
 
 If successful, this outputs the pathname of the PDB file requested
 
@@ -27,7 +27,7 @@ filename is in combination with a UUID that can't be fetched, but...)
 
 server = "msdl.microsoft.com"
 agent = "Microsoft-Symbol-Server/6.12.0002.633 (pdb_fetch:0.0)"
-url = "/download/symbols/%s.pdb/%s/%s.pd_"
+url = "/download/symbols/%s.pdb/%s/%s.pdb"
 
 pdbcache = "/tmp/pdb/"
 skiplist_file_name = "skiplist.txt"
@@ -43,7 +43,8 @@ def download_pdb(file_name, uuid):
 
   conn = httplib.HTTPConnection(server)
   headers = {"User-Agent": agent}
-  conn.request("GET", url % (basename, uuid, basename), "", headers)
+  get_url = url % (basename, uuid, basename)
+  conn.request("GET", get_url, "", headers)
 
   response = conn.getresponse()
 
@@ -54,21 +55,22 @@ def download_pdb(file_name, uuid):
   print("Downloading file ...", file=sys.stderr)
   pdb_buffer = response.read()
 
-  pdb_filename = os.path.basename(url % (file_name, uuid, file_name))
+  pdb_filename = os.path.basename(get_url)
   pdb_file = open(pdb_filename, 'w')
   pdb_file.write(pdb_buffer)
   pdb_file.close()
 
   print("Downloaded", file=sys.stderr)
 
-  # Run cabextract to extract PDB file from the CAB file
-  status = os.system("cabextract -q %s" % (pdb_filename))
-  if status != 0:
-    print("Decompressing cabinet file failed", file=sys.stderr)
-    return False
+  if get_url.endswith('_'):
+    # Run cabextract to extract PDB file from the CAB file
+    status = os.system("cabextract -q %s" % (pdb_filename))
+    if status != 0:
+      print("Decompressing cabinet file failed", file=sys.stderr)
+      return False
 
-  print("Extracted", file=sys.stderr)
-  os.remove(pdb_filename)
+    print("Extracted", file=sys.stderr)
+    os.remove(pdb_filename)
 
   # Move extracted pdb file into cache location
   if not os.path.exists(os.path.join(pdbcache, file_name, uuid)):
